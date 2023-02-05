@@ -13,7 +13,7 @@ let modeButtons = modesDiv.children;
 let mcw = mcan.width;
 let mch = mcan.height;
 let eventGUIsDiv = document.getElementById("eventguisdiv");
-let mousePos = {x: 0, y: 0, w: 0, h: 0};
+let mousePos;
 let selectedMode = {mode: "Move", index: 1};
 modeButtons[1].style.background = "gold";
 let arrowPlacing = undefined;
@@ -27,6 +27,7 @@ class Event{
         this.y = y;
         this.w;
         this.h;
+        this.boundsRect;
         this.arrows = [];
         let GUI = document.createElement("p");
         GUI.className = "event";
@@ -90,25 +91,39 @@ class Arrow{
                 totalBends = 0;
             }
         }
+        let intersection = lineIntersectRect(this.events[0].boundsRect, this.line.slice(0, 4))[0];
+        if (intersection != undefined) {
+            this.line.splice(0, 2, ...intersection);
+        }
+        intersection = lineIntersectRect(this.events[1].boundsRect, this.line.slice(this.line.length-4, this.line.length))[0];
+        if (intersection != undefined) {
+            this.line.splice(this.line.length-2, 2, ...intersection);
+        }
+        let ll = this.line.slice(this.line.length-4, this.line.length);
+        let angle = Math.atan2(ll[1]-ll[3], ll[0]-ll[2]);
+        this.line.push(ll[2]+Math.cos(angle+Math.PI/4)*20, ll[3]+Math.sin(angle+Math.PI/4)*20);
+        this.line.push(ll[2]+Math.cos(angle-Math.PI/4)*20, ll[3]+Math.sin(angle-Math.PI/4)*20);
     }
     drawSelf(ctx){
         ctx.lineWidth = 5;
         ctx.strokeStyle = "#ffffff";
         ctx.beginPath();
         ctx.moveTo(this.line[0], this.line[1]);
-        for (let i=2; i<this.line.length; i+=2) {
+        for (let i=2; i<this.line.length-4; i+=2) {
             ctx.lineTo(this.line[i], this.line[i+1]);
         }
+        ctx.moveTo(this.line[this.line.length-4], this.line[this.line.length-3]);
+        ctx.lineTo(this.line[this.line.length-6], this.line[this.line.length-5]);
+        ctx.lineTo(this.line[this.line.length-2], this.line[this.line.length-1]);
         ctx.stroke();
     }
 }
 
-function newCTButtonClicked(){
+newCTButton.addEventListener("click", ()=>{
     homePage.style.display = "none";
     editPage.style.display = "block";
     drawingLoop();
-}
-newCTButton.addEventListener("click", newCTButtonClicked);
+});
 
 eventNew.addEventListener("click", (event)=>{
     if (selectedMode.mode == "Move") {
@@ -119,7 +134,8 @@ eventNew.addEventListener("click", (event)=>{
 });
 
 document.addEventListener("mousemove", (event)=>{
-    mousePos = {x: event.clientX, y: event.clientY, w: 0, h: 0};
+    mousePos = {x: event.clientX, y: event.clientY, w: 0, h: 0, boundsRect: 0};
+    mousePos.boundsRect = {x: mousePos.x-10, y: mousePos.y-10, w: mousePos.w+20, h: mousePos.h+20};
     events.forEach((evnt)=>{
         if (evnt.dragging) {
             evnt.x = event.x-evnt.clickPos.x-3.5;
@@ -156,9 +172,8 @@ for (let i=1; i<modeButtons.length; i++) {
 function eventIntersections(line){
     let bends = [];
     events.forEach((evnt)=>{
-        let rect = evnt.GUI.getBoundingClientRect();
-        let r = {x: evnt.x-10, y: evnt.y-10, w: rect.width+20, h: rect.height+20};
-        let bend = lineIntersectRect(r, line);
+        let r = evnt.boundsRect;
+        let bend = lineBendsRect(r, line);
         if (bend.length == 2) {
             bends.push(bend);
         }
@@ -166,25 +181,9 @@ function eventIntersections(line){
     return bends;
 }
 
-function lineIntersectRect(r, line){
+function lineBendsRect(r, line){
     let bend = [];
-    let intersections = [];
-    let intersection = lineIntersectXYLine(line, [r.x, r.y, r.x, r.y+r.h]);
-    if (intersection.length == 2) {
-        intersections.push(intersection);
-    }
-    intersection = lineIntersectXYLine(line, [r.x+r.w, r.y, r.x+r.w, r.y+r.h]);
-    if (intersection.length == 2) {
-        intersections.push(intersection);
-    }
-    intersection = lineIntersectXYLine(line, [r.x, r.y, r.x+r.w, r.y]);
-    if (intersection.length == 2) {
-        intersections.push(intersection);
-    }
-    intersection = lineIntersectXYLine(line, [r.x, r.y+r.h, r.x+r.w, r.y+r.h]);
-    if (intersection.length == 2) {
-        intersections.push(intersection);
-    }
+    let intersections = lineIntersectRect(r, line);
     if (intersections.length >= 2) {
         let midint = [0, 0];
         for (let i=0; i<intersections.length; i++) {
@@ -205,6 +204,27 @@ function lineIntersectRect(r, line){
         bend.shift();
     }
     return bend;
+}
+
+function lineIntersectRect(r, line){
+    let intersections = [];
+    let intersection = lineIntersectXYLine(line, [r.x, r.y, r.x, r.y+r.h]);
+    if (intersection.length == 2) {
+        intersections.push(intersection);
+    }
+    intersection = lineIntersectXYLine(line, [r.x+r.w, r.y, r.x+r.w, r.y+r.h]);
+    if (intersection.length == 2) {
+        intersections.push(intersection);
+    }
+    intersection = lineIntersectXYLine(line, [r.x, r.y, r.x+r.w, r.y]);
+    if (intersection.length == 2) {
+        intersections.push(intersection);
+    }
+    intersection = lineIntersectXYLine(line, [r.x, r.y+r.h, r.x+r.w, r.y+r.h]);
+    if (intersection.length == 2) {
+        intersections.push(intersection);
+    }
+    return intersections;
 }
 
 function lineIntersectXYLine(line1, line2){
@@ -250,6 +270,7 @@ function drawingLoop(){
         let rect = evnt.GUI.getBoundingClientRect();
         evnt.w = rect.width;
         evnt.h = rect.height;
+        evnt.boundsRect = {x: evnt.x-10, y: evnt.y-10, w: evnt.w+20, h: evnt.h+20};
     });
     if (arrowPlacing != undefined) {
         arrowPlacing.events[1] = mousePos;
