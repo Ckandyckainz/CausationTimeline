@@ -17,6 +17,7 @@ let mousePos;
 let selectedMode = {mode: "Move", index: 1};
 modeButtons[1].style.background = "gold";
 let arrowPlacing = undefined;
+let arrowHovering = undefined;
 let events = [];
 let arrows = [];
 
@@ -47,7 +48,7 @@ class Event{
                 this.dragging = !this.dragging;
                 if (!this.dragging && this.y > mch*0.9) {
                     eventGUIsDiv.removeChild(this.GUI);
-                    events.splice(this.id, 1);
+                    remove(events, this.id);
                 }
             }
             if (selectedMode.mode == "Add Arrow") {
@@ -58,6 +59,7 @@ class Event{
                 } else {
                     if (arrowPlacing.events[0].id != this.id) {
                         arrowPlacing.events[1] = this;
+                        this.arrows.push(arrowPlacing);
                         arrowPlacing = undefined;
                     }
                 }
@@ -109,7 +111,12 @@ class Arrow{
     }
     drawSelf(ctx){
         ctx.lineWidth = 5;
-        ctx.strokeStyle = "#ffffff";
+        ctx.strokeStyle = "white";
+        if (arrowHovering != undefined) {
+            if (arrowHovering.id == this.id) {
+                ctx.strokeStyle = "gold";
+            }
+        }
         ctx.beginPath();
         ctx.moveTo(this.line[0], this.line[1]);
         for (let i=2; i<this.line.length-4; i+=2) {
@@ -147,6 +154,43 @@ document.addEventListener("mousemove", (event)=>{
             evnt.GUI.style.top = ""+evnt.y+"px";
         }
     });
+    if (selectedMode.mode == "Remove Arrow") {
+        arrows.forEach((arrow)=>{
+            let hovering = false;
+            for (let i=0; i<arrow.line.length-2; i+=2) {
+                let minmax = [];
+                for (let j=0; j<2; j++) {
+                    if (arrow.line[i+j] < arrow.line[i+j+2]) {
+                        minmax[0+j*2] = arrow.line[i+j]-7;
+                        minmax[1+j*2] = arrow.line[i+j+2]+7;
+                    } else {
+                        minmax[0+j*2] = arrow.line[i+j+2]-7;
+                        minmax[1+j*2] = arrow.line[i+j]+7;
+                    }
+                }
+                if (event.x > minmax[0] && event.x < minmax[1] && event.y > minmax[2] && event.y < minmax[3]) {
+                    let func = linePointsToFunc(arrow.line.slice(i, i+4));
+                    let y = func.m*event.x+func.b;
+                    if (event.y > y-7 && event.y < y+7) {
+                        hovering = true;
+                    }
+                }
+            }
+            if (hovering) {
+                arrowHovering = arrow;
+            } else if (arrowHovering != undefined) {
+                if (arrowHovering.id == arrow.id) {
+                    arrowHovering = undefined;
+                }
+            }
+        });
+    }
+});
+
+mcan.addEventListener("click", (event)=>{
+    if (selectedMode.mode == "Remove Arrow" && arrowHovering != undefined) {
+        remove(arrows, arrowHovering.id);
+    }
 });
 
 function eventsEditable(canEdit){
@@ -182,6 +226,13 @@ document.addEventListener("keypress", (event)=>{
         setMode(m);
     }
 });
+
+function remove(array, index){
+    array.splice(index, 1)
+    for (let i=index; i<array.length; i++) {
+        array[i].id = i;
+    }
+}
 
 function eventIntersections(line){
     let bends = [];
