@@ -86,6 +86,9 @@ class Arrow{
                 if (bends.length > 0) {
                     this.line.splice(i+2, 0, ...bends[0]);
                 }
+                if (i > 100) {
+                    i = this.line.length;
+                }
             }
             if (counter == 20) {
                 totalBends = 0;
@@ -195,10 +198,13 @@ function lineBendsRect(r, line){
         distances.push([(midint[0]-(r.x+r.w))**2 + (midint[1]-r.y)**2, r.x+r.w+1, r.y-1]);
         distances.push([(midint[0]-r.x)**2 + (midint[1]-(r.y+r.h))**2, r.x-1, r.y+r.h+1]);
         distances.push([(midint[0]-(r.x+r.w))**2 + (midint[1]-(r.y+r.h))**2, r.x+r.w+1, r.y+r.h+1]);
-        bend = distances[0];
-        for (let i=1; i<4; i++) {
+        bend = [mcw*1000];
+        for (let i=0; i<4; i++) {
             if (distances[i][0] < bend[0]) {
-                bend = distances[i];
+                let dist = distances[i].slice(1, 3);
+                if (!arraysEqual(dist, line.slice(0, 2)) && !arraysEqual(dist, line.slice(2, 4))) {
+                    bend = distances[i];
+                }
             }
         }
         bend.shift();
@@ -261,6 +267,18 @@ function pinv(points){
 
 function xor(b1, b2){
     return (b1 || b2) && !(b1 && b2);
+}
+
+function arraysEqual(a1, a2){
+    equal = a1.length == a2.length;
+    if (equal) {
+        for (let i=0; i<a1.length; i++) {
+            if (a1[i] != a2[i]) {
+                equal = false;
+            }
+        }
+    }
+    return equal;
 }
 
 function drawingLoop(){
