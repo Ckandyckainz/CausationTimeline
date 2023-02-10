@@ -163,14 +163,25 @@ function eventsEditable(canEdit){
     }
 }
 
+function setMode(i){
+    modeButtons[selectedMode.index].style.background = "white";
+    modeButtons[i].style.background = "gold";
+    selectedMode = {mode: modeButtons[i].innerText, index: i};
+    eventsEditable(selectedMode.mode == "Edit");
+}
+
 for (let i=1; i<modeButtons.length; i++) {
     modeButtons[i].addEventListener("click", ()=>{
-        modeButtons[selectedMode.index].style.background = "white";
-        modeButtons[i].style.background = "gold";
-        selectedMode = {mode: modeButtons[i].innerText, index: i};
-        eventsEditable(selectedMode.mode == "Edit");
+        setMode(i);
     });
 }
+
+document.addEventListener("keypress", (event)=>{
+    let m = Number(event.key);
+    if (m != NaN && m != 0 && m < modeButtons.length) {
+        setMode(m);
+    }
+});
 
 function eventIntersections(line){
     let bends = [];
