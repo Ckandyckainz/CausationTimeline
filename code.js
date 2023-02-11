@@ -49,9 +49,8 @@ class Event{
             if (selectedMode.mode == "Move") {
                 this.clickPos = {x: event.offsetX, y: event.offsetY};
                 this.dragging = !this.dragging;
-                if (!this.dragging && false) {
-                    eventGUIsDiv.removeChild(this.GUI);
-                    remove(events, this.id);
+                if (!this.dragging && this.y > mcanDiv.scrollTop+window.innerHeight*0.9) {
+                    this.remove();
                 }
             }
             if (selectedMode.mode == "Add Arrow") {
@@ -68,6 +67,13 @@ class Event{
                 }
             }
         });
+    }
+    remove(){
+        eventGUIsDiv.removeChild(this.GUI);
+        remove(events, this.id);
+        while (this.arrows.length != 0) {
+            this.arrows[0].remove();
+        }
     }
 }
 
@@ -129,6 +135,16 @@ class Arrow{
         ctx.lineTo(this.line[this.line.length-6], this.line[this.line.length-5]);
         ctx.lineTo(this.line[this.line.length-2], this.line[this.line.length-1]);
         ctx.stroke();
+    }
+    remove(){
+        remove(arrows, this.id);
+        this.events.forEach((evnt)=>{
+            let index = 0;
+            while (evnt.arrows[index].id != this.id) {
+                index ++;
+            }
+            evnt.arrows.splice(index, 1);
+        });
     }
 }
 
@@ -192,7 +208,7 @@ document.addEventListener("mousemove", (event)=>{
 
 mcan.addEventListener("click", (event)=>{
     if (selectedMode.mode == "Remove Arrow" && arrowHovering != undefined) {
-        remove(arrows, arrowHovering.id);
+        arrowHovering.remove();
     }
 });
 
@@ -200,6 +216,11 @@ mcanDiv.addEventListener("scroll", ()=>{
     events.forEach((evnt)=>{
         evnt.GUI.style.left = (evnt.x-mcanDiv.scrollLeft)+"px";
         evnt.GUI.style.top = (evnt.y-mcanDiv.scrollTop)+"px";
+        if (!evnt.dragging && evnt.y > mcanDiv.scrollTop+window.innerHeight*0.9-evnt.w/2) {
+            evnt.GUI.style.display = "none";
+        } else {
+            evnt.GUI.style.display = "block";
+        }
     });
 })
 
