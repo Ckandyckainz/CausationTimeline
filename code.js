@@ -25,9 +25,11 @@ editPanelEventInput = document.getElementById("editpaneleventinput");
 editPanelTimeInput = document.getElementById("editpaneltimeinput");
 editPanelGroupInput = document.getElementById("editpanelgroupinput");
 editPanelGroupColorInput = document.getElementById("editpanelgroupcolorinput");
+let showTimesButton = document.getElementById("showtimesbutton");
 let mousePos;
 let selectedMode = {mode: "Move", index: 1};
 modeButtons[1].style.background = "gold";
+let showingTimes = false;
 let arrowPlacing = undefined;
 let arrowHovering = undefined;
 let eventSelected = undefined;
@@ -50,6 +52,7 @@ groups[0].events.push({GUI: eventNew});
 class Event{
     constructor(x, y){
         this.id = events.length;
+        this.text = "event";
         this.x = x;
         this.y = y;
         this.w;
@@ -93,14 +96,15 @@ class Event{
                 }
             } else if (selectedMode.mode == "Edit") {
                 eventSelected = this;
-                editPanelEventInput.value = this.GUI.innerText;
+                editPanelEventInput.value = this.text;
                 editPanelGroupInput.value = this.group.name;
                 editPanelTimeInput.value = this.time;
                 editPanelGroupColorInput.value = this.group.color;
             }
         });
         this.GUI.addEventListener("input", ()=>{
-            editPanelEventInput.value = this.GUI.innerText;
+            this.text = this.GUI.innerText;
+            editPanelEventInput.value = this.text;
         });
     }
     remove(){
@@ -155,11 +159,11 @@ class Arrow{
         this.line.push(ll[2]+Math.cos(angle-Math.PI/4)*20, ll[3]+Math.sin(angle-Math.PI/4)*20);
     }
     drawSelf(ctx){
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 4;
         ctx.strokeStyle = this.events[0].group.color;
         if (arrowHovering != undefined) {
             if (arrowHovering.id == this.id) {
-                ctx.strokeStyle = "gold";
+                ctx.lineWidth = 8;
             }
         }
         ctx.beginPath();
@@ -260,6 +264,25 @@ mcanDiv.addEventListener("scroll", ()=>{
     });
 })
 
+showTimesButton.addEventListener("click", ()=>{
+    if (selectedMode.mode != "Edit") {
+        showingTimes = !showingTimes;
+        if (showingTimes) {
+            showTimesButton.style.background = "gold";
+            events.forEach((evnt)=>{
+                if (evnt.time != undefined) {
+                    evnt.GUI.innerText = evnt.text+" ("+evnt.time+")";
+                }
+            });
+        } else {
+            showTimesButton.style.background = "white";
+            events.forEach((evnt)=>{
+                evnt.GUI.innerText = evnt.text;
+            });
+        }
+    }
+});
+
 
 function eventsEditable(canEdit){
     if (canEdit) {
@@ -271,12 +294,16 @@ function eventsEditable(canEdit){
         events.forEach((evnt)=>{
             evnt.GUI.contentEditable = "true";
             evnt.GUI.style.resize = "both";
+            evnt.GUI.innerText = evnt.text;
         });
     } else {
         editPanel.style.display = "none";
         events.forEach((evnt)=>{
             evnt.GUI.contentEditable = "false";
             evnt.GUI.style.resize = "none";
+            if (showingTimes && evnt.time != undefined) {
+                evnt.GUI.innerText = evnt.text+" ("+evnt.time+")";
+            }
         });
     }
 }
@@ -289,7 +316,7 @@ function setMode(i){
         arrowHovering = undefined;
     }
 }
-for (let i=1; i<modeButtons.length; i++) {
+for (let i=1; i<modeButtons.length-1; i++) {
     modeButtons[i].addEventListener("click", ()=>{
         setMode(i);
     });
@@ -304,11 +331,12 @@ document.addEventListener("keypress", (event)=>{
 
 editPanelEventInput.addEventListener("input", ()=>{
     if (eventSelected != undefined) {
-        eventSelected.GUI.innerText = editPanelEventInput.value;
+        eventSelected.text = editPanelEventInput.value;
+        eventSelected.GUI.innerText = eventSelected.text;
     }
 });
 editPanelTimeInput.addEventListener("input", ()=>{
-    
+    eventSelected.time = editPanelTimeInput.value;
 });
 editPanelGroupInput.addEventListener("change", ()=>{
     let group;
