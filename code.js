@@ -2,10 +2,13 @@ let homePage = document.getElementById("homepage");
 let newCTButton = document.getElementById("newctbutton");
 let editPage = document.getElementById("editpage");
 editPage.style.display = "none";
+let mcanDiv = document.getElementById("mcandiv");
+mcanDiv.style.maxWidth = ""+window.innerWidth+"px";
+mcanDiv.style.maxHeight = ""+(window.innerHeight*0.9)+"px";
 let mcan = document.getElementById("mcan");
 let mctx = mcan.getContext("2d");
-mcan.width = window.innerWidth;
-mcan.height = window.innerHeight;
+mcan.width = window.innerWidth*3;
+mcan.height = window.innerHeight*2;
 let toolbar = document.getElementById("toolbar");
 let eventNew = document.getElementById("eventnew");
 let modesDiv = document.getElementById("modes");
@@ -46,7 +49,7 @@ class Event{
             if (selectedMode.mode == "Move") {
                 this.clickPos = {x: event.offsetX, y: event.offsetY};
                 this.dragging = !this.dragging;
-                if (!this.dragging && this.y > mch*0.9) {
+                if (!this.dragging && false) {
                     eventGUIsDiv.removeChild(this.GUI);
                     remove(events, this.id);
                 }
@@ -138,20 +141,20 @@ newCTButton.addEventListener("click", ()=>{
 eventNew.addEventListener("click", (event)=>{
     if (selectedMode.mode == "Move") {
         let rect = eventNew.getBoundingClientRect();
-        let evnt = new Event(rect.x, rect.y);
+        let evnt = new Event(rect.x+mcanDiv.scrollLeft, rect.y+mcanDiv.scrollTop);
         evnt.clickPos = {x: event.offsetX, y: event.offsetY};
     }
 });
 
 document.addEventListener("mousemove", (event)=>{
-    mousePos = {x: event.clientX, y: event.clientY, w: 0, h: 0, boundsRect: 0};
+    mousePos = {x: event.clientX+mcanDiv.scrollLeft, y: event.clientY+mcanDiv.scrollTop, w: 0, h: 0, boundsRect: 0};
     mousePos.boundsRect = {x: mousePos.x-10, y: mousePos.y-10, w: mousePos.w+20, h: mousePos.h+20};
     events.forEach((evnt)=>{
         if (evnt.dragging) {
-            evnt.x = event.x-evnt.clickPos.x-3.5;
-            evnt.y = event.y-evnt.clickPos.y-3.5;
-            evnt.GUI.style.left = ""+evnt.x+"px";
-            evnt.GUI.style.top = ""+evnt.y+"px";
+            evnt.x = event.x-evnt.clickPos.x-3.5+mcanDiv.scrollLeft;
+            evnt.y = event.y-evnt.clickPos.y-3.5+mcanDiv.scrollTop;
+            evnt.GUI.style.left = (evnt.x-mcanDiv.scrollLeft)+"px";
+            evnt.GUI.style.top = (evnt.y-mcanDiv.scrollTop)+"px";
         }
     });
     if (selectedMode.mode == "Remove Arrow") {
@@ -193,6 +196,13 @@ mcan.addEventListener("click", (event)=>{
     }
 });
 
+mcanDiv.addEventListener("scroll", ()=>{
+    events.forEach((evnt)=>{
+        evnt.GUI.style.left = (evnt.x-mcanDiv.scrollLeft)+"px";
+        evnt.GUI.style.top = (evnt.y-mcanDiv.scrollTop)+"px";
+    });
+})
+
 function eventsEditable(canEdit){
     if (canEdit) {
         events.forEach((evnt)=>{
@@ -212,6 +222,9 @@ function setMode(i){
     modeButtons[i].style.background = "gold";
     selectedMode = {mode: modeButtons[i].innerText, index: i};
     eventsEditable(selectedMode.mode == "Edit");
+    if (selectedMode.mode != "Remove Arrow") {
+        arrowHovering = undefined;
+    }
 }
 
 for (let i=1; i<modeButtons.length; i++) {
@@ -222,7 +235,7 @@ for (let i=1; i<modeButtons.length; i++) {
 
 document.addEventListener("keypress", (event)=>{
     let m = Number(event.key);
-    if (m != NaN && m != 0 && m < modeButtons.length) {
+    if (m != NaN && m != 0 && m < modeButtons.length && selectedMode.mode != "Edit") {
         setMode(m);
     }
 });
