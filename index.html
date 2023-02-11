@@ -70,6 +70,15 @@
                 font-size: 1.5em;
                 background: white;
             }
+            #editpanel{
+                background: #606060;
+                position: absolute;
+                display: none;
+                padding: 10px;
+            }
+            #editpanel p{
+                display: inline-block;
+            }
         </style>
     </head>
     <body>
@@ -91,6 +100,17 @@
             <div id="mcandiv">
                 <canvas id="mcan"></canvas>
                 <div id="eventguisdiv"></div>
+            </div>
+            <div id="editpanel">
+                <p>Event:</p>
+                <input id="editpaneleventinput">
+                <hr>
+                <p>Time:</p>
+                <input id="editpaneltimeinput">
+                <hr>
+                <p>Group:</p>
+                <input id="editpanelgroupinput">
+                <input id="editpanelgroupcolorinput" type="color">
             </div>
         </div>
         <script src="code.js"></script>

@@ -16,13 +16,36 @@ let modeButtons = modesDiv.children;
 let mcw = mcan.width;
 let mch = mcan.height;
 let eventGUIsDiv = document.getElementById("eventguisdiv");
+let editPanel = document.getElementById("editpanel");
+editPanel.style.width = window.innerWidth/3+"px";
+editPanel.style.height = window.innerHeight/3+"px";
+editPanel.style.left = window.innerWidth*2/3+"px";
+editPanel.style.top = window.innerHeight*2/3+"px";
+editPanelEventInput = document.getElementById("editpaneleventinput");
+editPanelTimeInput = document.getElementById("editpaneltimeinput");
+editPanelGroupInput = document.getElementById("editpanelgroupinput");
+editPanelGroupColorInput = document.getElementById("editpanelgroupcolorinput");
 let mousePos;
 let selectedMode = {mode: "Move", index: 1};
 modeButtons[1].style.background = "gold";
 let arrowPlacing = undefined;
 let arrowHovering = undefined;
+let eventSelected = undefined;
 let events = [];
 let arrows = [];
+let groups = [];
+
+class Group{
+    constructor(name){
+        this.name = name;
+        this.id = groups.length;
+        this.color = "#ffffff";
+        this.events =  [];
+        groups.push(this);
+    }
+}
+new Group(undefined);
+groups[0].events.push({GUI: eventNew});
 
 class Event{
     constructor(x, y){
@@ -33,12 +56,16 @@ class Event{
         this.h;
         this.boundsRect;
         this.arrows = [];
+        this.group = groups[0];
+        groups[0].events.push(this);
+        this.time;
         let GUI = document.createElement("p");
         GUI.className = "event";
         GUI.innerText = "event";
         GUI.style.left = ""+x+"px";
         GUI.style.top = ""+y+"px";
         GUI.contentEditable = "false";
+        setEventGUIColor(GUI, this.group.color);
         eventGUIsDiv.appendChild(GUI);
         this.GUI = GUI;
         this.dragging = true;
@@ -52,8 +79,7 @@ class Event{
                 if (!this.dragging && this.y > mcanDiv.scrollTop+window.innerHeight*0.9) {
                     this.remove();
                 }
-            }
-            if (selectedMode.mode == "Add Arrow") {
+            } else if (selectedMode.mode == "Add Arrow") {
                 if (arrowPlacing == undefined) {
                     let arrow = new Arrow(this);
                     arrowPlacing = arrow;
@@ -65,12 +91,22 @@ class Event{
                         arrowPlacing = undefined;
                     }
                 }
+            } else if (selectedMode.mode == "Edit") {
+                eventSelected = this;
+                editPanelEventInput.value = this.GUI.innerText;
+                editPanelGroupInput.value = this.group.name;
+                editPanelTimeInput.value = this.time;
+                editPanelGroupColorInput.value = this.group.color;
             }
+        });
+        this.GUI.addEventListener("input", ()=>{
+            editPanelEventInput.value = this.GUI.innerText;
         });
     }
     remove(){
         eventGUIsDiv.removeChild(this.GUI);
         remove(events, this.id);
+        removeItem(this.group.events, this, false);
         while (this.arrows.length != 0) {
             this.arrows[0].remove();
         }
@@ -120,7 +156,7 @@ class Arrow{
     }
     drawSelf(ctx){
         ctx.lineWidth = 5;
-        ctx.strokeStyle = "white";
+        ctx.strokeStyle = this.events[0].group.color;
         if (arrowHovering != undefined) {
             if (arrowHovering.id == this.id) {
                 ctx.strokeStyle = "gold";
@@ -224,20 +260,26 @@ mcanDiv.addEventListener("scroll", ()=>{
     });
 })
 
+
 function eventsEditable(canEdit){
     if (canEdit) {
+        editPanelEventInput.value = "";
+        editPanelGroupInput.value = "";
+        editPanelTimeInput.value = "";
+        editPanelGroupColorInput.value = "#ffffff";
+        editPanel.style.display = "block";
         events.forEach((evnt)=>{
             evnt.GUI.contentEditable = "true";
             evnt.GUI.style.resize = "both";
         });
     } else {
+        editPanel.style.display = "none";
         events.forEach((evnt)=>{
             evnt.GUI.contentEditable = "false";
             evnt.GUI.style.resize = "none";
         });
     }
 }
-
 function setMode(i){
     modeButtons[selectedMode.index].style.background = "white";
     modeButtons[i].style.background = "gold";
@@ -247,13 +289,11 @@ function setMode(i){
         arrowHovering = undefined;
     }
 }
-
 for (let i=1; i<modeButtons.length; i++) {
     modeButtons[i].addEventListener("click", ()=>{
         setMode(i);
     });
 }
-
 document.addEventListener("keypress", (event)=>{
     let m = Number(event.key);
     if (m != NaN && m != 0 && m < modeButtons.length && selectedMode.mode != "Edit") {
@@ -261,12 +301,72 @@ document.addEventListener("keypress", (event)=>{
     }
 });
 
+
+editPanelEventInput.addEventListener("input", ()=>{
+    if (eventSelected != undefined) {
+        eventSelected.GUI.innerText = editPanelEventInput.value;
+    }
+});
+editPanelTimeInput.addEventListener("input", ()=>{
+    
+});
+editPanelGroupInput.addEventListener("change", ()=>{
+    let group;
+    for (let i=0; i<groups.length; i++) {
+        if (groups[i].name == editPanelGroupInput.value) {
+            group = groups[i];
+        }
+    }
+    if (group == undefined) {
+        group = new Group(editPanelGroupInput.value);
+    }
+    removeItem(eventSelected.group.events, eventSelected, false);
+    eventSelected.group = group;
+    group.events.push(eventSelected);
+    editPanelGroupColorInput.value = group.color;
+    setEventGUIColor(eventSelected.GUI, group.color);
+});
+editPanelGroupColorInput.addEventListener("input", ()=>{
+    eventSelected.group.color = editPanelGroupColorInput.value;
+    eventSelected.group.events.forEach((evnt)=>{
+        setEventGUIColor(evnt.GUI, eventSelected.group.color);
+    });
+});
+function setEventGUIColor(GUI, color){
+    GUI.style.color = color;
+    GUI.style.borderColor = color;
+    let dc = "#";
+    for (let i=1; i<7; i+=2) {
+        dc += Math.floor(parseInt(color.substring(i, i+2), 16)/4).toString(16).padStart(2, "0");
+    }
+    GUI.style.background = dc;
+}
+
+
 function remove(array, index){
     array.splice(index, 1)
     for (let i=index; i<array.length; i++) {
         array[i].id = i;
     }
 }
+function findIndex(array, item){
+    for (let i=0; i<array.length; i++) {
+        if (array[i].id == item.id) {
+            return i;
+        }
+    }
+}
+function removeItem(array, item, resetIds){
+    let index = findIndex(array, item);
+    if (index != undefined) {
+        if (resetIds) {
+            remove(array, index);
+        } else {
+            array.splice(index, 1);
+        }
+    }
+}
+
 
 function eventIntersections(line){
     let bends = [];
@@ -279,7 +379,6 @@ function eventIntersections(line){
     });
     return bends;
 }
-
 function lineBendsRect(r, line){
     let bend = [];
     let intersections = lineIntersectRect(r, line);
@@ -307,7 +406,6 @@ function lineBendsRect(r, line){
     }
     return bend;
 }
-
 function lineIntersectRect(r, line){
     let intersections = [];
     let intersection = lineIntersectXYLine(line, [r.x, r.y, r.x, r.y+r.h]);
@@ -328,7 +426,6 @@ function lineIntersectRect(r, line){
     }
     return intersections;
 }
-
 function lineIntersectXYLine(line1, line2){
     let func = linePointsToFunc(line1);
     let x = (line2[0] == line2[2]);
@@ -345,12 +442,10 @@ function lineIntersectXYLine(line1, line2){
     }
     return intersection;
 }
-
 function linePointsToFunc(line){
     let m = (line[3]-line[1])/(line[2]-line[0]);
     return {m: m, b: line[1]-(m*line[0])};
 }
-
 function pinv(points){
     let inv = points.slice();
     for (let i=0; i<inv.length; i+=2) {
@@ -360,11 +455,9 @@ function pinv(points){
     }
     return inv;
 }
-
 function xor(b1, b2){
     return (b1 || b2) && !(b1 && b2);
 }
-
 function arraysEqual(a1, a2){
     equal = a1.length == a2.length;
     if (equal) {
@@ -376,6 +469,7 @@ function arraysEqual(a1, a2){
     }
     return equal;
 }
+
 
 function drawingLoop(){
     mctx.fillStyle = "#000000";
